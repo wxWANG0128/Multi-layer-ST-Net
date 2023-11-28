@@ -9,35 +9,15 @@ import os
 import pandas as pd
 
 
-def generate_graph_seq2seq_io_data(
-        df, x_offsets, y_offsets, add_time_in_day=True, add_day_in_week=False, scaler=None
-):
-    """
-    Generate samples from
-    :param df:
-    :param x_offsets:
-    :param y_offsets:
-    :param add_time_in_day:
-    :param add_day_in_week:
-    :param scaler:
-    :return:
-    # x: (epoch_size, input_length, num_nodes, input_dim)
-    # y: (epoch_size, output_length, num_nodes, output_dim)
-    """
-
+def generate_graph_seq2seq_io_data(df, x_offsets, y_offsets):
     num_samples, num_nodes = df.shape
     data = np.asarray(df.values)
     data = np.expand_dims(data, axis=-1)
     data = data.astype(np.float64)
     feature_list = [data]
-    if add_time_in_day:
-        time_ind = (df.index.values - df.index.values.astype("datetime64[D]")) / np.timedelta64(1, "D")
-        time_in_day = np.tile(time_ind, [1, num_nodes, 1]).transpose((2, 1, 0))
-        feature_list.append(time_in_day)
-    if add_day_in_week:
-        dow = df.index.dayofweek
-        dow_tiled = np.tile(dow, [1, num_nodes, 1]).transpose((2, 1, 0))
-        feature_list.append(dow_tiled)
+    time_ind = (df.index.values - df.index.values.astype("datetime64[D]")) / np.timedelta64(1, "D")
+    time_in_day = np.tile(time_ind, [1, num_nodes, 1]).transpose((2, 1, 0))
+    feature_list.append(time_in_day)
 
     data = np.concatenate(feature_list, axis=-1)
     x, y = [], []
@@ -66,8 +46,6 @@ def generate_train_val_test(args):
         df,
         x_offsets=x_offsets,
         y_offsets=y_offsets,
-        add_time_in_day=True,
-        add_day_in_week=False,
     )
 
     print("x shape: ", x.shape, ", y shape: ", y.shape)
@@ -94,7 +72,6 @@ def generate_train_val_test(args):
             y_offsets=y_offsets.reshape(list(y_offsets.shape) + [1]),
         )
 
-
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--output_dir", type=str, default="data/BAY_NEW", help="Output directory.")
@@ -102,15 +79,12 @@ if __name__ == "__main__":
     parser.add_argument("--seq_length_x", type=int, default=12, help="Sequence Length.",)
     parser.add_argument("--seq_length_y", type=int, default=12, help="Sequence Length.",)
     parser.add_argument("--y_start", type=int, default=1, help="Y pred start", )
-    parser.add_argument("--dow", action='store_true',)
 
     args = parser.parse_args()
-    '''
     if os.path.exists(args.output_dir):
         reply = str(input(f'{args.output_dir} exists. Do you want to overwrite it? (y/n)')).lower().strip()
         if reply[0] != 'y': exit
     else:
         os.makedirs(args.output_dir)   
-    '''
 
     generate_train_val_test(args)
