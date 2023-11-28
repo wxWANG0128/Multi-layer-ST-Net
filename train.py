@@ -27,11 +27,6 @@ num_nodes = np.load(data + '/train.npz',allow_pickle=True)['x'][0,0,:,0].shape[0
 in_dim = np.load(data + '/train.npz')['x'][0,0,0,:].shape[0]
 
 def main():
-    #make dir
-    if not os.path.isfile(data):
-        os.makedirs(data)
-    if not os.path.isfile(save):
-        os.makedirs(save)
     #set seed
     torch.manual_seed(seed)
     np.random.seed(seed)

@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import os
 
-processor = 'cuda:0'
-data = 'data/BAY_NEW'
-adjdata='data/sensor_graph/adj_mx_bay.pkl'
+processor = 'cpu'
+data = 'data/METR-LA'
+adjdata='data/sensor_graph/adj_mx.pkl'
 seq_length = 12
 nhid = 32
 batch_size = 64
@@ -25,14 +25,15 @@ num_nodes = np.load(data + '/train.npz')['x'][0,0,:,0].shape[0]
 in_dim = np.load(data + '/train.npz')['x'][0,0,0,:].shape[0]
 
 def main():
-    if not os.path.isfile(save):
-        os.makedirs(save)
     device = torch.device(processor)
     adj_mx = util.load_adj(adjdata)
     supports = [torch.tensor(i).to(device) for i in adj_mx]
     model = net2(device, num_nodes, TCN_kernel_size, TCN_dilation, dropout, supports=supports, in_dim=in_dim, out_dim=seq_length, residual_channels=nhid, dilation_channels=nhid, skip_channels=nhid * 8, end_channels=nhid * 16)
     model.to(device)
-    model.load_state_dict(torch.load(checkpoint))
+    if processor == 'cpu':
+        model.load_state_dict(torch.load(checkpoint, map_location=torch.device('cpu')))
+    else:
+        model.load_state_dict(torch.load(checkpoint))
     model.eval()
 
     print('model load successfully')
@@ -85,13 +86,19 @@ def main():
     y3 = realy[2000,:,2].cpu().detach().numpy()
     yhat3 = scaler.inverse_transform(yhat[2000,:,2]).cpu().detach().numpy()
 
+    y = realy.cpu().detach().numpy()
+    yhat = scaler.inverse_transform(yhat).cpu().detach().numpy()
+
+    np.save(save+'y',y)
+    np.save(save+'yhat',yhat)
+
     np.save(save+'y12',y12)
     np.save(save+'yhat12',yhat12)
     np.save(save+'y3',y3)
     np.save(save+'yhat3',yhat3)
 
-    #df2 = pd.DataFrame({'real12':y12,'pred12':yhat12, 'real3': y3, 'pred3':yhat3})
-    #df2.to_csv('./wave.csv',index=False)
+
+
 
 if __name__ == "__main__":
     main()

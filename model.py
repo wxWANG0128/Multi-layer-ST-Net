@@ -39,7 +39,7 @@ class TE(nn.Module):
 
 
 class TATT(nn.Module):
-    def __init__(self, c_in, c_out, K, d, mask = True):
+    def __init__(self, device, c_in, c_out, K, d, mask = True):
         super(TATT, self).__init__()
         # K: number of attention heads
         # d: dimension of attention outputs
@@ -51,7 +51,8 @@ class TATT(nn.Module):
         self.conv_k = nn.Conv2d(c_in, c_out, kernel_size=(1, 1), padding=(0, 0), stride=(1, 1), bias=True)
         self.conv_v = nn.Conv2d(c_in, c_out, kernel_size=(1, 1), padding=(0, 0), stride=(1, 1), bias=True)
         self.conv_o = nn.Conv2d(c_out, c_out, kernel_size=(1, 1), padding=(0, 0), stride=(1, 1), bias=True)
-        self.small_value = torch.tensor(-2**15+1.).to(torch.device('cuda:0'))
+        self.small_value = torch.tensor(-2**15+1.).to(torch.device(device))
+        self.device = device
 
     def forward(self, x, tem_embedding):
         # input format: [batch, channels, num_nodes, num_time_steps]
@@ -78,19 +79,19 @@ class TATT(nn.Module):
             mask = torch.unsqueeze(torch.unsqueeze(mask, dim=0), dim=0)
             mask = mask.repeat(self.K * batch_size, num_vertex, 1, 1)
             mask = mask.to(torch.bool)
-            mask = mask.to(torch.device('cuda:0'))
+            mask = mask.to(torch.device(self.device))
             attention = torch.where(mask, attention, self.small_value)
         # softmax
         attention = F.softmax(attention, dim=-1)
         x = torch.matmul(attention, value)
         x = x.permute(0, 3, 1, 2)
         x = torch.cat(torch.split(x, batch_size_, dim=0), dim=1)
-        x = F.relu( self.conv_o(x) )
+        x = F.relu(self.conv_o(x))
         del query, key, value, attention
         return x
 
 class STlayer(nn.Module):
-    def __init__(self,residual_channels, dilation_channels, dropout, supports, kt, kd, nodevec1, nodevec2):
+    def __init__(self,device, residual_channels, dilation_channels, dropout, supports, kt, kd, nodevec1, nodevec2):
         super(STlayer, self).__init__()
         self.nodevec1 = nodevec1
         self.nodevec2 = nodevec2
@@ -100,7 +101,7 @@ class STlayer(nn.Module):
             self.supports_len += len(supports)
         self.supports_len +=1
         self.TCN = nn.Conv2d(residual_channels, dilation_channels, kernel_size=(1, kt), padding=(0, 0), stride=(1, 1), bias=True,dilation=(1, kd))
-        self.TATT = TATT(64, 32, 8, 4)
+        self.TATT = TATT(device, 64, 32, 8, 4)
         self.GCN = GCN(dilation_channels,residual_channels,dropout,support_len=self.supports_len)
         self.bn = nn.BatchNorm2d(residual_channels)
 
@@ -129,9 +130,9 @@ class net2(nn.Module):
         self.nodevec2 = nn.Parameter(torch.randn(10, num_nodes).to(device), requires_grad=True).to(device)
         for d in range(tcn_d, tcn_d+3):
             self.layers.append(
-                STlayer(residual_channels, dilation_channels, dropout, supports, tcn_k, 1, self.nodevec1, self.nodevec2))
+                STlayer(device, residual_channels, dilation_channels, dropout, supports, tcn_k, 1, self.nodevec1, self.nodevec2))
             self.layers.append(
-                STlayer(residual_channels, dilation_channels, dropout, supports, tcn_k, d, self.nodevec1, self.nodevec2))
+                STlayer(device, residual_channels, dilation_channels, dropout, supports, tcn_k, d, self.nodevec1, self.nodevec2))
         self.skip_conv_end = nn.Conv2d(residual_channels, skip_channels,kernel_size=(1, 1))
         self.start_conv = nn.Conv2d(in_dim, residual_channels, kernel_size=(1,1))
         self.end_conv_0 = nn.Conv2d(residual_channels, skip_channels, kernel_size=(1,1), bias=True)
