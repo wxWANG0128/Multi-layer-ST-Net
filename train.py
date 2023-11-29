@@ -2,7 +2,7 @@ import torch
 import numpy as np
 import time
 import util
-from engine import trainer2
+from engine import *
 import os
 
 ##PARAMETER_DEFINITION
@@ -18,7 +18,7 @@ weight_decay = 0.0001
 epochs = 100
 print_every = 100
 seed = 3407
-save = './garage/metr_net2.1/'
+save = './garage/bay23_net2/'
 expid = 1
 TCN_kernel_size = 2
 TCN_dilation = 2
@@ -36,9 +36,11 @@ def main():
     dataloader = util.load_dataset(data, batch_size, batch_size, batch_size)
     scaler = dataloader['scaler']
     supports = [torch.tensor(i).to(device) for i in adj_mx]
+
     engine = trainer2(scaler, in_dim, seq_length, num_nodes, nhid, dropout,
                           lr, weight_decay, device, supports, tcn_k=TCN_kernel_size, tcn_d=TCN_dilation)
-    print("start training...",flush=True)
+
+    print("start training on"+str(engine)+" ...",flush=True)
     his_loss =[]
     val_time = []
     train_time = []

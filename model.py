@@ -97,8 +97,7 @@ class STlayer(nn.Module):
         self.nodevec2 = nodevec2
         self.supports = supports
         self.supports_len = 0
-        if supports is not None:
-            self.supports_len += len(supports)
+        self.supports_len += len(supports)
         self.supports_len +=1
         self.TCN = nn.Conv2d(residual_channels, dilation_channels, kernel_size=(1, kt), padding=(0, 0), stride=(1, 1), bias=True,dilation=(1, kd))
         self.TATT = TATT(device, 64, 32, 8, 4)
@@ -162,3 +161,192 @@ class net2(nn.Module):
         x = self.end_conv_2(x)
         return x
 
+class STlayer_no_adp(nn.Module):
+    def __init__(self,device, residual_channels, dilation_channels, dropout, supports, kt, kd):
+        super(STlayer_no_adp, self).__init__()
+        self.supports = supports
+        self.supports_len = 0
+        self.supports_len += len(supports)
+        self.TCN = nn.Conv2d(residual_channels, dilation_channels, kernel_size=(1, kt), padding=(0, 0), stride=(1, 1), bias=True,dilation=(1, kd))
+        self.TATT = TATT(device, 64, 32, 8, 4)
+        self.GCN = GCN(dilation_channels,residual_channels,dropout,support_len=self.supports_len)
+        self.bn = nn.BatchNorm2d(residual_channels)
+
+
+    def forward(self, x, tem_embedding):
+        residual = x
+        # dilated TCN
+        x = self.TCN(x)
+        x = F.relu(x)
+        # temporal_attention
+        x = self.TATT(x, tem_embedding)
+        #GCN
+        new_supports = self.supports
+        x = self.GCN(x, new_supports)
+        x = x + residual[:, :, :, -x.size(3):]
+        x = self.bn(x)
+        return x
+
+class net2_no_adp(nn.Module):
+    def __init__(self, device, num_nodes, tcn_k, tcn_d, dropout=0.3, supports=None, in_dim=2, out_dim=12, residual_channels=32,dilation_channels=32,skip_channels=256,end_channels=512):
+        super(net2_no_adp, self).__init__()
+        self.supports = supports
+        self.layers = nn.ModuleList()
+        for d in range(tcn_d, tcn_d+3):
+            self.layers.append(
+                STlayer_no_adp(device, residual_channels, dilation_channels, dropout, supports, tcn_k, 1))
+            self.layers.append(
+                STlayer_no_adp(device, residual_channels, dilation_channels, dropout, supports, tcn_k, d))
+        self.skip_conv_end = nn.Conv2d(residual_channels, skip_channels,kernel_size=(1, 1))
+        self.start_conv = nn.Conv2d(in_dim, residual_channels, kernel_size=(1,1))
+        self.end_conv_0 = nn.Conv2d(residual_channels, skip_channels, kernel_size=(1,1), bias=True)
+        self.end_conv_1 = nn.Conv2d(skip_channels, end_channels, kernel_size=(1,1), bias=True)
+        self.end_conv_2 = nn.Conv2d(end_channels, out_dim, kernel_size=(1,1), bias=True)
+        self.TE = TE(in_dim)
+
+    def forward(self, input):
+        tem_embedding = self.TE(input)
+        if input.size(3) < 13:
+            x = nn.functional.pad(input,(13-input.size(3),0,0,0))
+        else:
+            x = input
+        x = self.start_conv(x)
+        i = 0
+        for layer in self.layers:
+            x = layer(x, tem_embedding)
+            if i == 0:
+                skip = x
+            else:
+                skip = skip[:, :, :, -x.size(3):] + x
+            i += 1
+
+        x = F.relu(skip)
+        x = F.relu(self.end_conv_0(x))
+        x = F.relu(self.end_conv_1(x))
+        x = self.end_conv_2(x)
+        return x
+
+class STlayer_no_tem(nn.Module):
+    def __init__(self,device, residual_channels, dilation_channels, dropout, supports, kt, kd, nodevec1, nodevec2):
+        super(STlayer_no_tem, self).__init__()
+        self.nodevec1 = nodevec1
+        self.nodevec2 = nodevec2
+        self.supports = supports
+        self.supports_len = 0
+        if supports is not None:
+            self.supports_len += len(supports)
+        self.supports_len +=1
+        self.TCN = nn.Conv2d(residual_channels, dilation_channels, kernel_size=(1, kt), padding=(0, 0), stride=(1, 1), bias=True,dilation=(1, kd))
+        self.GCN = GCN(dilation_channels,residual_channels,dropout,support_len=self.supports_len)
+        self.bn = nn.BatchNorm2d(residual_channels)
+
+    def forward(self, x):
+        residual = x
+        # dilated TCN
+        x = self.TCN(x)
+        x = F.relu(x)
+        #GCN
+        adp = F.softmax(F.relu(torch.mm(self.nodevec1, self.nodevec2)), dim=1)
+        new_supports = self.supports + [adp]
+        x = self.GCN(x, new_supports)
+        x = x + residual[:, :, :, -x.size(3):]
+        x = self.bn(x)
+        return x
+
+class net2_no_tem(nn.Module):
+    def __init__(self, device, num_nodes, tcn_k, tcn_d, dropout=0.3, supports=None, in_dim=2, out_dim=12, residual_channels=32,dilation_channels=32,skip_channels=256,end_channels=512):
+        super(net2_no_tem, self).__init__()
+        self.supports = supports
+        self.layers = nn.ModuleList()
+        self.nodevec1 = nn.Parameter(torch.randn(num_nodes, 10).to(device), requires_grad=True).to(device)
+        self.nodevec2 = nn.Parameter(torch.randn(10, num_nodes).to(device), requires_grad=True).to(device)
+        for d in range(tcn_d, tcn_d+3):
+            self.layers.append(
+                STlayer_no_tem(device, residual_channels, dilation_channels, dropout, supports, tcn_k, 1, self.nodevec1, self.nodevec2))
+            self.layers.append(
+                STlayer_no_tem(device, residual_channels, dilation_channels, dropout, supports, tcn_k, d, self.nodevec1, self.nodevec2))
+        self.skip_conv_end = nn.Conv2d(residual_channels, skip_channels,kernel_size=(1, 1))
+        self.start_conv = nn.Conv2d(in_dim, residual_channels, kernel_size=(1,1))
+        self.end_conv_0 = nn.Conv2d(residual_channels, skip_channels, kernel_size=(1,1), bias=True)
+        self.end_conv_1 = nn.Conv2d(skip_channels, end_channels, kernel_size=(1,1), bias=True)
+        self.end_conv_2 = nn.Conv2d(end_channels, out_dim, kernel_size=(1,1), bias=True)
+
+    def forward(self, input):
+        if input.size(3) < 13:
+            x = nn.functional.pad(input,(13-input.size(3),0,0,0))
+        else:
+            x = input
+        x = self.start_conv(x)
+        i = 0
+        for layer in self.layers:
+            x = layer(x)
+            if i == 0:
+                skip = x
+            else:
+                skip = skip[:, :, :, -x.size(3):] + x
+            i += 1
+
+        x = F.relu(skip)
+        x = F.relu(self.end_conv_0(x))
+        x = F.relu(self.end_conv_1(x))
+        x = self.end_conv_2(x)
+        return x
+
+class STlayer_no_adp_tem(nn.Module):
+    def __init__(self,device, residual_channels, dilation_channels, dropout, supports, kt, kd):
+        super(STlayer_no_adp_tem, self).__init__()
+        self.supports = supports
+        self.supports_len = 0
+        self.supports_len += len(supports)
+        self.TCN = nn.Conv2d(residual_channels, dilation_channels, kernel_size=(1, kt), padding=(0, 0), stride=(1, 1), bias=True,dilation=(1, kd))
+        self.GCN = GCN(dilation_channels,residual_channels,dropout,support_len=self.supports_len)
+        self.bn = nn.BatchNorm2d(residual_channels)
+
+    def forward(self, x):
+        residual = x
+        # dilated TCN
+        x = self.TCN(x)
+        x = F.relu(x)
+        #GCN
+        new_supports = self.supports
+        x = self.GCN(x, new_supports)
+        x = x + residual[:, :, :, -x.size(3):]
+        x = self.bn(x)
+        return x
+
+class net2_no_adp_tem(nn.Module):
+    def __init__(self, device, num_nodes, tcn_k, tcn_d, dropout=0.3, supports=None, in_dim=2, out_dim=12, residual_channels=32,dilation_channels=32,skip_channels=256,end_channels=512):
+        super(net2_no_adp_tem, self).__init__()
+        self.supports = supports
+        self.layers = nn.ModuleList()
+        for d in range(tcn_d, tcn_d+3):
+            self.layers.append(
+                STlayer_no_adp_tem(device, residual_channels, dilation_channels, dropout, supports, tcn_k, 1))
+            self.layers.append(
+                STlayer_no_adp_tem(device, residual_channels, dilation_channels, dropout, supports, tcn_k, d))
+        self.skip_conv_end = nn.Conv2d(residual_channels, skip_channels,kernel_size=(1, 1))
+        self.start_conv = nn.Conv2d(in_dim, residual_channels, kernel_size=(1,1))
+        self.end_conv_0 = nn.Conv2d(residual_channels, skip_channels, kernel_size=(1,1), bias=True)
+        self.end_conv_1 = nn.Conv2d(skip_channels, end_channels, kernel_size=(1,1), bias=True)
+        self.end_conv_2 = nn.Conv2d(end_channels, out_dim, kernel_size=(1,1), bias=True)
+
+    def forward(self, input):
+        if input.size(3) < 13:
+            x = nn.functional.pad(input,(13-input.size(3),0,0,0))
+        else:
+            x = input
+        x = self.start_conv(x)
+        i = 0
+        for layer in self.layers:
+            x = layer(x)
+            if i == 0:
+                skip = x
+            else:
+                skip = skip[:, :, :, -x.size(3):] + x
+            i += 1
+
+        x = F.relu(skip)
+        x = F.relu(self.end_conv_0(x))
+        x = F.relu(self.end_conv_1(x))
+        x = self.end_conv_2(x)
+        return x
