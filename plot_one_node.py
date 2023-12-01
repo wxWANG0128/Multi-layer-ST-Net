@@ -4,10 +4,10 @@ import os
 import scipy
 
 ## Set node and time window
-start = 1000
-end = start + 500
-node = 190
-step_ahead = 6
+start = 0
+end = start + 1000
+node = 261
+step_ahead = 3
 ## Set path
 path = 'plot/bay_old/'
 
@@ -33,15 +33,15 @@ yhat = np.concatenate(yhat,axis=-1)
 
 yreal = yreal[node,:]
 yhat = yhat[node,:]
-x = range(1,yhat.size+1)
+x = range(start,end+1)
 #plot
 fig, ax = plt.subplots()
 ax.plot(x, yreal, label='Ground truth', linewidth=0.4)
 ax.plot(x, yhat, label='Prediction', linewidth=0.4)
-ax.set_xlabel('time(hour)')
+ax.set_xlabel('time step')
 ax.set_ylabel('Travel speed (mph)')
 ax.legend()
-plt.ylim(20, 80)
+plt.ylim(0, 75)
 
 #plt.show(dpi=300)
 plt.savefig(path+"node"+str(node)+':'+str(start)+'_'+str(end)+".png", dpi=300)
