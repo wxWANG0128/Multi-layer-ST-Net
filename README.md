@@ -2,7 +2,7 @@
 This is a multi-layer spatial-temporal network for traffic prediction. This project was done as the assignment for the course CE634.
 
 # Requirements
-Please note that the package `TransBigData` usually requires extra packages. Pleas see [Guide](https://transbigdata.readthedocs.io/en/latest/#).
+Please note that the package `TransBigData` usually requires extra packages. Please see [Guide](https://transbigdata.readthedocs.io/en/latest/#).
 ```
 pip install -r requirements.txt
 ```
