@@ -12,17 +12,15 @@ adjdata='data/sensor_graph/adj_mx_bay.pkl'
 seq_length = 12
 nhid = 32
 batch_size = 64
-lr = 0.001
 dropout = 0.3
-weight_decay = 0.0001
 checkpoint = 'garage/bay23_net2/_exp1_best_1.22.pth'
 plotheatmap = 'True'
 TCN_kernel_size = 2
 TCN_dilation = 2
 save = 'plot/bay_new/'
 
-num_nodes = np.load(data + '/train.npz')['x'][0,0,:,0].shape[0]
-in_dim = np.load(data + '/train.npz')['x'][0,0,0,:].shape[0]
+num_nodes = np.load(data + '/val.npz')['x'][0,0,:,0].shape[0]
+in_dim = np.load(data + '/val.npz')['x'][0,0,0,:].shape[0]
 
 def main():
     device = torch.device(processor)
@@ -78,7 +76,7 @@ def main():
         adp = adp*(1/np.max(adp))
         df = pd.DataFrame(adp)
         sns.heatmap(df, cmap="hot_r",vmin=0.3, vmax=1)
-        plt.savefig(save+"emb_la" + '.png',dpi=300)
+        plt.savefig(save+"emb-la" + '.png',dpi=300)
 
     y12 = realy[2000,:,11].cpu().detach().numpy()
     yhat12 = scaler.inverse_transform(yhat[2000,:,11]).cpu().detach().numpy()

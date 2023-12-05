@@ -45,4 +45,4 @@ colors = plot_yhat12[:,2]
 cmap = mcolors.ListedColormap(['red', 'orange','yellow','green', 'blue'])
 plt.scatter(plot_yhat12[:,1], plot_y12[:,0], s=20, c=colors ,cmap=cmap, vmin=20, vmax=70)
 plt.colorbar(shrink=0.65, aspect=20)
-plt.savefig(path+'60_hat.png', transparent=None, dpi=300)
+plt.savefig(path+'60-hat.png', transparent=None, dpi=300)

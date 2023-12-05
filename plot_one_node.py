@@ -38,13 +38,13 @@ x = range(start,end+1)
 fig, ax = plt.subplots()
 ax.plot(x, yreal, label='Ground truth', linewidth=0.4)
 ax.plot(x, yhat, label='Prediction', linewidth=0.4)
-ax.set_xlabel('time step')
+ax.set_xlabel('Time step')
 ax.set_ylabel('Travel speed (mph)')
 ax.legend()
 plt.ylim(0, 75)
 
 #plt.show(dpi=300)
-plt.savefig(path+"node"+str(node)+':'+str(start)+'_'+str(end)+".png", dpi=300)
+plt.savefig(path+"node"+str(node)+'-'+str(start)+'-'+str(end)+".png", dpi=300)
 
 
 
