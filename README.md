@@ -11,7 +11,7 @@ The data structure in this model obeys the structure used in `DCRNN`[(Li et al.,
 
 [metr-la](https://drive.google.com/file/d/1B3ue_5JOiirEYpLC12pMpitZ09jEvB6g/view?usp=drive_link)
 
-[PEMS-Bay 2023](https://drive.google.com/file/d/1tXeodobgp3n9CnoSQdmPKWxQhs4h5Mq4/view?usp=drive_link)
+[PEMS-BAY 2023](https://drive.google.com/file/d/1tXeodobgp3n9CnoSQdmPKWxQhs4h5Mq4/view?usp=drive_link)
 
 To prepare the data for training, Please run:
 ```
