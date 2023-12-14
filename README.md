@@ -20,6 +20,9 @@ To prepare the data for training, Please run:
 # METR-LA
 python generate_training_data.py --output_dir=data/METR-LA --traffic_df_filename=data/metr-la.h5
 
-# PEMS-BAY
+# PEMS-BAY23
 python generate_training_data.py --output_dir=data/BAY-NEW --traffic_df_filename=data/pems-bay_0.h5
+
+# PEMS-BAY
+python generate_training_data.py --output_dir=data/BAY-NEW --traffic_df_filename=data/pems-bay.h5
 ```
