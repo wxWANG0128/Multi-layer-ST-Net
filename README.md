@@ -7,7 +7,7 @@ Please note that the package `TransBigData` usually requires extra packages. Ple
 pip install -r requirements.txt
 ```
 # Data Preparation
-The data structure in this model obeys the structure used in `DCRNN`[(Li et al., 2018)](https://github.com/liyaguang/DCRNN). The `metr-la` and `PEMS-BAY` dataset was provided by [Li et al. (2018)](https://github.com/liyaguang/DCRNN). The `PEMS-BAY23` dataset was collected from [Caltrans](https://pems.dot.ca.gov/). This dataset contains data observed from 325 sensors in bay area from 01/01/2023 to 30/08/2023. These two datasets can be downloaded from:
+The data structure in this model obeys the structure used in `DCRNN`[(Li et al., 2018)](https://github.com/liyaguang/DCRNN). The `metr-la` and `PEMS-BAY` dataset was provided by [Li et al. (2018)](https://github.com/liyaguang/DCRNN). The `PEMS-BAY23` dataset was collected from [Caltrans](https://pems.dot.ca.gov/). This dataset contains data observed from 325 sensors in bay area from 01/01/2023 to 30/08/2023. These three datasets can be downloaded from:
 
 [metr-la](https://drive.google.com/file/d/1B3ue_5JOiirEYpLC12pMpitZ09jEvB6g/view?usp=drive_link)
 
